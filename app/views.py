@@ -1,4 +1,10 @@
-
+from werkzeug.utils import secure_filename
+import os
+from app import app,db
+from flask import render_template,request,redirect,url_for,flash,jsonify
+from app.forms import registerform,loginform
+import datetime
+from werkzeug.security import check_password_hash
 
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
@@ -54,9 +60,10 @@ def register():
         location=request.form['location']
         biography=request.form['biography']
         upload_photo=form.upload_photo.data 
+        join_on=date.today()
         filename=secure_filename(upload_photo.filename)
         upload_photo.save(os.path.join(app.config['UPLOAD_FOLDER'],filename))
-        newuser=users(username,password,firstname,lastname,email,location,biography,filename)
+        newuser=users(username,password,firstname,lastname,email,location,biography,filename,join_on)
         db.session.add(newuser)
         db.session.commit() 
         return jsonify({"message": "new user success fully made"})
