@@ -1,12 +1,17 @@
 from werkzeug.utils import secure_filename
-import os,jwt, datetime
+import os
 from app import app,db, login_manager
 from flask import render_template,request,redirect,url_for,flash,jsonify,send_from_directory, session, abort, g, make_response
 from app.forms import registerform,loginform, CarForm, SearchForm
 from werkzeug.security import check_password_hash
 from functools import wraps
-from app.config import *
 from app.models import Users,Cars,Favourites
+
+# Using JWT
+import jwt
+from flask import _request_ctx_stack
+from functools import wraps
+import datetime
 
 def requires_auth(f):
 
@@ -108,10 +113,10 @@ def register():
         location=request.form['location']
         biography=request.form['biography']
         upload_photo=form.upload_photo.data 
-        join_on=date.today()
+        join_on=datetime.today()
         filename=secure_filename(upload_photo.filename)
         upload_photo.save(os.path.join(app.config['UPLOAD_FOLDER'],filename))
-        newuser=users(username,password,firstname,lastname,email,location,biography,filename,join_on)
+        newuser=Users(username,password,firstname,lastname,email,location,biography,filename,join_on)
         db.session.add(newuser)
         db.session.commit() 
         return jsonify({"message": "new user success fully made"})
@@ -127,11 +132,11 @@ def login():
         username=request.form['username']
         password=request.form['password']  
         
-        user=users.query.filter_by(username=username).first() 
+        user=Users.query.filter_by(username=username).first() 
         
         if user != None and check_password_hash(user.password, password):
-            login_user(user)
-            print(current_user.id)
+            login_manager.login_user(user)
+            print(login_manager.current_user.id)
             return jsonify({"message":"you are now logged in"})
         return jsonify({"message":"invalid password and/or username"})  
     
@@ -141,7 +146,7 @@ def login():
 @app.route('/api/auth/logout')
 @login_required 
 def logout():
-    logout_user()
+    login_manager.logout_user()
     return jsonify({'message':"you are now logged out"}) 
 
 @app.route('/api/cars', methods=['POST','GET'])

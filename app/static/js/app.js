@@ -1,9 +1,9 @@
-// VARIABLES
+
+let displaySuccessMsg = False;
+let displayDangerMsg = False;
 var jwt;
 let dangerMsg;
-let displayDangerMsg = false;
 let successMsg;
-let displaySuccessMsg = false;
 
 const app = Vue.createApp({
   data() {
@@ -18,8 +18,8 @@ app.component('app-header', {
   name: 'AppHeader',
   template: `
   <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top">
-    <a class="navbar-brand" href="/"><img id="icon" src="../static/images/photogram.png" alt="Logo"/> <b>Photogram</b></a>
-    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+    <a class="navbar-brand" href="/"><img id="icon" src="../static/imgs/photogram.png" alt="Logo"/> <b>Photogram</b></a>
+    <button  type="button" data-toggle="collapse" class="navbar-toggler" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-label="Toggle navigation" aria-expanded="false">
         <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse" id="navbarSupportedContent">
@@ -51,8 +51,8 @@ app.component('app-footer', {
   `
 });
 
-//BEGINNING OF FORMS
-
+// forms
+ 
 const registerForm = {
   name:'register-form', 
   template: `         
@@ -140,7 +140,6 @@ const registerForm = {
   }
 };
 
-//LOGIN FORM
 
 const loginForm = {
   name:'login-form', 
@@ -290,12 +289,16 @@ const NotFound = {
 // Define Routes
 const routes = [
   { path: "/", component: Home },
-  // Put other routes here
+
   {path: "/register", component: registerForm},
+
   {path: "/login", component: loginForm},
-  // {path: "/addcar", component: }
+  
+  {path: "/addcar", component: },
+
   // This is a catch all route in case none of the above matches
   {path: "/logout", component: logout},
+  
   { path: '/:pathMatch(.*)*', name: 'not-found', component: NotFound }
 ];
 
