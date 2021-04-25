@@ -1,11 +1,18 @@
-from werkzeug.utils import secure_filename
+
 import os
 from app import app,db, login_manager
-from flask import render_template,request,redirect,url_for,flash,jsonify,send_from_directory, session, abort, g, make_response
 from app.forms import registerform,loginform, CarForm, SearchForm
-from werkzeug.security import check_password_hash
-from functools import wraps
 from app.models import Users,Cars,Favourites
+from app.config import *
+
+# Using Flask
+from flask import Flask 
+from flask import render_template,request,redirect,url_for,flash,jsonify,send_from_directory, session, abort, g, make_response
+from flask_login import login_user, logout_user, current_user, login_required
+
+from werkzeug.utils import secure_filename
+from werkzeug.security import check_password_hash
+
 
 # Using JWT
 import jwt
@@ -59,70 +66,6 @@ def api_secure():
     return jsonify(data={"user": user}, message="Success")
 
 
-@app.route('/', defaults={'path': ''})
-@app.route('/<path:path>')
-def index(path):
-    """
-    Because we use HTML5 history mode in vue-router we need to configure our
-    web server to redirect all routes to index.html. Hence the additional route
-    "/<path:path".
-    Also we will render the initial webpage and then let VueJS take control.
-    """
-    return render_template('index.html')
-
-@app.route('/<file_name>.txt')
-def send_text_file(file_name):
-    """Send your static text file."""
-    file_dot_text = file_name + '.txt'
-    return app.send_static_file(file_dot_text)
-
-@app.after_request
-def add_header(response):
-    """
-    Add headers to both force latest IE rendering engine or Chrome Frame,
-    and also tell the browser not to cache the rendered page. If we wanted
-    to we could change max-age to 600 seconds which would be 10 minutes.
-    """
-    response.headers['X-UA-Compatible'] = 'IE=Edge,chrome=1'
-    response.headers['Cache-Control'] = 'public, max-age=0'
-    return response
-
-def form_errors(form):
-    error_messages = []
-    """Collects form errors"""
-    for field, errors in form.errors.items():
-        for error in errors:
-            message = u"Error in the %s field - %s" % (
-                    getattr(form, field).label.text,
-                    error
-                )
-            error_messages.append(message)
-
-    return error_messages
-
-@app.route('/api/users/register', methods=['POST'])
-def register():
-    form=registerform()
-    if request.method =='POST' :
-        username=request.form['username']
-        password=(request.form['password'])
-        """ generate hash ? """
-        firstname=request.form['firstname']
-        lastname=request.form['lastname']
-        email=request.form['email']
-        location=request.form['location']
-        biography=request.form['biography']
-        upload_photo=form.upload_photo.data 
-        join_on=datetime.today()
-        filename=secure_filename(upload_photo.filename)
-        upload_photo.save(os.path.join(app.config['UPLOAD_FOLDER'],filename))
-        newuser=Users(username,password,firstname,lastname,email,location,biography,filename,join_on)
-        db.session.add(newuser)
-        db.session.commit() 
-        return jsonify({"message": "new user success fully made"})
-
-    errors=form_errors(form) 
-    return jsonify({"errors":errors})
 
 
 @app.route('/api/auth/login',methods=['POST'])
@@ -143,11 +86,44 @@ def login():
     errors=form_errors(form) 
     return jsonify({"errors":errors})
 
-@app.route('/api/auth/logout')
-@login_required 
+# @app.route('/api/auth/logout', methods=['POST'])
+# @login_required 
+# def logout():
+#     login_manager.logout_user()
+#     return jsonify({'message':"you are now logged out"}) 
+@app.route('/api/auth/logout', methods=['POST'])
+@requires_auth
+@login_required
 def logout():
-    login_manager.logout_user()
-    return jsonify({'message':"you are now logged out"}) 
+    user = g.current_user
+    return jsonify(data={"user": user}, message="You have logged out")
+
+@app.route('/api/users/register', methods=['POST'])
+def register():
+    form=registerform()
+    if request.method =='POST' :
+        username=request.form['username']
+        password=(request.form['password'])
+        """ generate hash ? """
+        firstname=request.form['firstname']
+        lastname=request.form['lastname']
+        email=request.form['email']
+        location=request.form['location']
+        biography=request.form['biography']
+        upload_photo=form.upload_photo.data 
+        join_on=datetime.today()
+        filename=secure_filename(upload_photo.filename)
+        #upload_photo.save(os.path.join(app.config['UPLOAD_FOLDER'],filename))
+        newuser=Users(username=username,password=password,firstname=firstname,lastname=lastname,email=email,location=location,biography=bio,photo=filename,join_on=join_on)
+        if newuser is not None:
+            db.session.add(newuser)
+            db.session.commit() 
+            upload_photo.save(os.path.join(app.config['UPLOAD_FOLDER'],filename))
+            jsonmsg={'message': 'New User Successful added',}  
+            return jsonify(jsonmsg=jsonmsg)
+    else: 
+        errors=form_errors(form) 
+        return jsonify({"errors":errors})
 
 @app.route('/api/cars', methods=['POST','GET'])
 def car():
@@ -169,7 +145,7 @@ def car():
                 db.session.add(car)
                 db.session.commit()
                 pic.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                jsonmsg=jsonify(message="Successful")         
+                jsonmsg=jsonify(message="Car Successful Added")         
                 return jsonmsg
             else:
                 err=form_errors(form)
@@ -177,7 +153,7 @@ def car():
                 return jsonErr
             
     if request.method == 'GET':
-        allc=[]
+        carzz=[]
         cars=Cars.query.order_by(Cars.id).all()
         for c in cars:
             car={}
@@ -188,18 +164,24 @@ def car():
             car["photo"]=c.photo
             car["make"]=c.make
             car["model"]=c.model
-            allc.append(car)
-            return jsonify(allcars=allc,test=g.current_user["userid"])
-        
+            carzz.append(car)
+            return jsonify(allcars=carzz)
+
 @app.route('/api/cars/<car_id>', methods=['GET'])
+@requires_auth
 def car_details(car_id):       
     if request.method == 'GET':
+        f=False
         c=Cars.query.filter_by(id=car_id).first()
+        favs=Favourites.query.filter((Favourites.car_id==car_id) & (Favourites.user_id==g.current_user["userid"])).first()
+        if favs!=None:
+            f=True
         return jsonify(id=c.id,model=c.model,make=c.make,user_id=c.user_id,car_type=c.car_type,
             description=c.description,price=c.price,photo=c.photo,
-            transmission=c.transmission,colour=c.colour,year=c.year)
+            transmission=c.transmission,colour=c.colour,year=c.year,Faved=f)
 
 @app.route('/api/cars/<car_id>/favourite', methods=['POST'])
+@requires_auth
 def favourite_car(car_id):       
     if request.method == 'POST':
         userid=g.current_user['userid']
@@ -220,13 +202,15 @@ def user_details(user_id):
         user["location"]=u.location
         user["biography"]=u.biography        
         user["photo"]=u.photo
-        user["date_joined"]=u.date_joined
+        date = u.join_on
+        user["join_on"]=u.date.strftime("%B %d, %Y")
         return jsonify(user=user)
 
 @app.route('/api/users/<user_id>/favourites', methods=['GET'])
-def user_favourites(user_id):       
+@requires_auth
+def user_favourites(user_id):  
+    favcars=[]     
     if request.method == 'GET':
-        favcars=[]
         favouritecar=Favourites.query.filter_by(user_id=user_id).all()
         for x in favouritecar:
             c=Cars.query.filter_by(id=x.car_id).first()
@@ -242,13 +226,14 @@ def user_favourites(user_id):
         return jsonify(favcars=favcars)
 
 @app.route('/api/search',methods=["GET"])
+@requires_auth
 def car_search():
     search=[]
     if request.method=="GET":
         make=request.args.get('searchbymake')
         model=request.args.get('searchbymodel')
-        search_cars= Cars.query.filter((Cars.make.like(make)|Cars.model.like(model)))
-        for i in search_cars:
+        findcars= Cars.query.filter((Cars.make.like(make)|Cars.model.like(model)))
+        for i in findcars:
             car={}
             car['id']=i.id
             car["user_id"]=i.user_id
@@ -259,10 +244,60 @@ def car_search():
             car["model"]=i.model
             search.append(car)
         return jsonify(searchedcars=search)
-  
+
 @login_manager.user_loader
 def load_user(id):
     return Users.query.get(int(id))
+
+# Please create all new routes and view functions above this route.
+# This route is now our catch all route for our VueJS single page
+# application.
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def index(path):
+    """
+    Because we use HTML5 history mode in vue-router we need to configure our
+    web server to redirect all routes to index.html. Hence the additional route
+    "/<path:path".
+    Also we will render the initial webpage and then let VueJS take control.
+    """
+    return render_template('index.html')
+
+# Here we define a function to collect form errors from Flask-WTF
+# which we can later use
+def form_errors(form):
+    error_messages = []
+    """Collects form errors"""
+    for field, errors in form.errors.items():
+        for error in errors:
+            message = u"Error in the %s field - %s" % (
+                    getattr(form, field).label.text,
+                    error
+                )
+            error_messages.append(message)
+
+    return error_messages
+
+###
+# The functions below should be applicable to all Flask apps.
+###
+
+@app.route('/<file_name>.txt')
+def send_text_file(file_name):
+    """Send your static text file."""
+    file_dot_text = file_name + '.txt'
+    return app.send_static_file(file_dot_text)
+
+@app.after_request
+def add_header(response):
+    """
+    Add headers to both force latest IE rendering engine or Chrome Frame,
+    and also tell the browser not to cache the rendered page. If we wanted
+    to we could change max-age to 600 seconds which would be 10 minutes.
+    """
+    response.headers['X-UA-Compatible'] = 'IE=Edge,chrome=1'
+    response.headers['Cache-Control'] = 'public, max-age=0'
+    return response
 
 @app.errorhandler(404)
 def page_not_found(error):
