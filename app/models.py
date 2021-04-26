@@ -14,7 +14,7 @@ class Cars(db.Model):
     year = db.Column(db.String(80))
     transmission = db.Column(db.String(80))
     car_type= db.Column(db.String(80))
-    price=db.Column(db.Decimal)
+    price=db.Column(db.Float)
     photo = db.Column(db.String(80))
     user_id = db.Column(db.Integer)
 
