@@ -242,6 +242,378 @@ const loginForm = {
   }
 };
 
+
+const explorepage = {
+  name: 'explorepage',
+  template: `
+      <div class="container maincontainer" >
+          <div id="displayexplore">
+              <h2>Explore</h2>
+              <div id="explore-search">
+                  <form @submit.prevent="search()" id="explore-form" method="GET" >
+                      <div class="form-group col-4">
+                          <label for="make">Make</label>
+                          <input type="text" class="form-control" name="make" />
+                      </div>
+                      <div class="form-group col-4">
+                          <label for="model">Model</label>
+                          <input name="model" type="text" class="form-control" />
+                      </div>
+                      <div class="form-group search-btn-div">
+                          <button type="submit" class="btn btn-success  search-btn">Search</button>
+                          </div>
+                  </form>
+              </div>  
+              <div class="carslist" v-if="listOfCars[0]">
+              <div v-for="cars in listOfCars">
+                  <div class="card" style="width: 15rem;">
+                      <img class="card-img-top "  :src="cars.photo">
+                    <div class="card-body">
+                        <div class="name-model-price">
+                       <div class="name-model">
+                            <span  class="car-name">{{cars.year.concat(" ",cars.make)}}</span>
+                         <span class="graytext">{{cars.model}}</span>
+                         </div>
+                         <a href="#" class="btn btn-success  card-price-btn">
+                         <img class="icons" src='/static/images/tagicon.png'>
+                         <span><span>$</span>{{cars.price}}</span>
+                       </a>
+                      </div>
+                      <a :href="cars.id" @click="getCarDetails" class="btn btn-primary card-view-btn">View more details</a>
+                </div>
+                </div>
+              </div>
+              </div>
+          </div>
+      </div>
+  `,
+  created() {
+      let self = this;
+      fetch("/api/cars", {
+          method: 'GET',
+          headers: {
+              'X-CSRFToken': token,
+              'Authorization': 'Bearer ' + localStorage.getItem('token')
+          },
+          credentials: 'same-origin'        
+      })
+      .then(function(response) {
+          return response.json();
+      })
+      .then(function(jsonResponse) {
+          let count=0
+          let temp=[]
+          let carz=jsonResponse.data.reverse()
+          for (let index = 0; index < carz.length; index++) {
+              if (index==3){
+                  break;
+              }
+              temp.push(jsonResponse.data[index]); 
+          }
+          self.listOfCars=temp;
+      })
+      .catch(function(error) {
+          console.log(error);
+      });
+  },
+  data() {
+      return {
+          listOfCars : []
+      }
+  },
+  methods: {
+      getCarDetails: function(event) {
+          event.preventDefault();
+          let carid=event.target.getAttribute("href");
+          router.push({ name: 'details', params: { id: carid}}); 
+      },
+
+      search: function() {
+          let self = this;
+          let exploreForm = document.getElementById('explore-form');
+          let form_data = new FormData(exploreForm);
+          
+          let form_values = []
+
+          for (var p of form_data) {
+              form_values.push(p[1].trim());
+          }
+
+          let make = form_values[0];
+          let model = form_values[1];
+
+          fetch("/api/search?make=" + make + "&model=" + model, {
+              method: 'GET',
+              headers: {
+                  'X-CSRFToken': token,
+                  'Authorization': 'Bearer ' + localStorage.getItem('token')
+              },
+              credentials: 'same-origin'        
+          })
+          .then(function(response) {
+              return response.json();
+          })
+          .then(function(jsonResponse) {
+              self.listOfCars = jsonResponse.data.reverse();
+          })
+          .catch(function(error) {
+              console.log(error);
+          });
+      }
+  }
+};
+
+const User_Page = {
+  name: 'User_Page',
+  template: `
+      <div class="container maincontainer">
+          <div id="displayfav">
+              <div id="profile">
+                  <div id="profileimagediv">
+                      <img class="favcar" id="round" :src="user.photo">
+                  </div>
+                  <div id="profiledetailsdiv" class="descriptions">
+                      <h2 id="profile-name">{{user.name}}</h2>
+                      <h4 class="graytext">@<span>{{user.username}}</span></h4>
+                      <p class="graytext">{{user.biography}}</p>
+                      <div >
+                          <div>
+                              <p class="profile-user-info graytext">Email</p>
+                              <p class="profile-user-info graytext">Location</p>
+                              <p class="profile-user-info graytext">Joined</p>
+                          </div>
+                          <div>
+                              <p class="profile-user-info">{{user.email}}</p>
+                              <p class="profile-user-info">{{user.location}}</p>
+                              <p class="profile-user-info">{{user.date_joined}}</p>
+                          </div>
+                      </div> 
+                  </div>
+              </div>
+              <div ><h1>Cars Favourited</h1></div>
+              <div class="carslist">
+              <div v-for="cars in listOfCars">
+                  <div class="card" style="width: 18rem;">
+                      <img class="card-img-top favcar"  :src="cars.photo">
+                      <div class="card-body">
+                          <div class="name-model-price">
+                              <div class="name-model">
+                                  <span  class="car-name">{{cars.year.concat(" ",cars.make)}}</span>
+                                  <span class="graytext">{{cars.model}}</span>
+                              </div>
+                              <a href="#" class="btn btn-success card-price-btn">
+                                  <img class="icons" src='/static/images/'>
+                                  <span><span>$</span>{{cars.price}}</span>
+                              </a>
+                          </div>
+                          <a :href="cars.id" class="btn btn-primary card-view-btn" @click="getCarFavDetails">View more details</a>
+                      </div>
+                  </div>
+              </div>
+              </div>
+          </div>
+      </div>  
+  `, 
+  created: function() {
+      let self=this;
+          fetch("/api/users/"+ localStorage.getItem('current_user'), {
+              method: 'GET',
+              headers: {
+                  'X-CSRFToken': token,
+                  'Authorization': 'Bearer ' + localStorage.getItem('token')
+              },
+              credentials: 'same-origin'        
+          })
+          .then(function(response) {
+              return response.json();
+          })
+          .then(function(jsonResponse) {
+              self.userInfo = jsonResponse.data;
+              fetch("/api/users/"+ localStorage.getItem('current_user') + "/favourites", {
+                  method: 'GET',
+                  headers: {
+                      'X-CSRFToken': token,
+                      'Authorization': 'Bearer ' + localStorage.getItem('token')
+                  },
+                  credentials: 'same-origin'        
+              })
+              .then(function(response) {
+                  return response.json();
+              })
+              .then(function(jsonResponse) {
+                  self.listOfCars = jsonResponse.data;
+              })
+              .catch(function(error) {
+                  console.log(error);
+              });
+          })
+          .catch(function(error) {
+              console.log(error);
+          });      
+  },
+  methods:{
+      getCarFavDetails: function(event) {
+          event.preventDefault();
+          let carid=event.target.getAttribute("href");
+          router.push({ name: 'details', params: { id: carid}}); 
+      }
+  },
+  data() {
+      return {
+          listOfCars: [],
+          userInfo: [],
+          host:window.location.protocol + "//" + window.location.host
+      }
+  }
+};
+
+const Details = {
+  name: 'Details',
+  template: `
+      <div class="container maincontainer">
+          <div id="display-car-details" v-if="details[0]">
+              <div id="car-details-card">
+                  <img id="car-d-image" class="car-detail-image" :src="details[0].photo" alt="car image in card">
+                  <div id="car-details">
+                      <h1 id="car-d-heading" > {{details[0].year.concat(" ",details[0].make)}}</h1>
+                      <h4 class="graytext">{{details[0].model}}</h4>
+                      <p class="car-d-description graytext">{{details[0].description}}</p>
+                      <div id="reduce-gap">
+                          <div class="cpbd">
+                              <div class="cp">
+                                  <div>
+                                      <p class="car-d-spec graytext">Color</p>
+                                  </div>
+                                  <div>
+                                      <p class="car-d-spec">{{details[0].colour}}</p>
+                                  </div>
+                              </div>
+                              <div class="bd">
+                                  <div>
+                                      <p class="car-d-spec graytext">Body Type</p>
+                                  </div>
+                                  <div>
+                                      <p class="car-d-spec">{{details[0].type}}</p>
+                                  </div>
+                              </div>
+                              <br>
+                          </div>
+                          <div class="cpbd">
+                              <div class="cp">
+                                  <div>
+                                      <p class="car-d-spec graytext">Price</p>
+                                  </div>
+                                  <div>
+                                      <p class="car-d-spec">{{details[0].price}}</p>
+                                  </div>
+                              </div>
+                              <div class="bd">
+                                  <div>
+                                      <p class="car-d-spec graytext">Transmission</p>
+                                  </div>
+                                  <div>
+                                      <p class="car-d-spec">{{details[0].transmission}}</p>
+                                  </div>
+                              </div>
+                              <br>
+                          </div>
+                      </div>
+                      <div id="card-d-btns" >
+                          <a href="#" class="btn btn-success ">Email Owner</a>
+                          <div " >
+                              <button href="#" v-if="fav()" @click="addFavourite" id="heartbtn" class="heart fa fa-heart"></button>
+                              <button href="#" v-else @click="addFavourite" id="heartbtn" class="heart fa fa-heart-o fa-heart"></button>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      </div> 
+  `,
+  created(){
+      let self=this;
+      fetch("/api/cars/"+this.$route.params.id, {
+          method: 'GET',
+          headers: {
+              'X-CSRFToken': token,
+              'Authorization': 'Bearer ' + localStorage.getItem('token')
+          },
+          credentials: 'same-origin'        
+      })
+      .then(function(response) {
+          return response.json();
+      })
+      .then(function(jsonResponse){
+          self.details = jsonResponse.data;
+          this.isFav=jsonResponse.isFav;
+      })
+      .catch(function(error) {
+          console.log(error);
+      });
+  }, 
+  methods: {
+      addFavourite: function(event) {
+          event.target.classList.toggle("fa-heart-o");
+          if(event.target.classList.contains("fa-heart-o")===false){
+              fetch("/api/cars/"+this.$route.params.id+"/favourite", {
+                  method: 'POST',
+                  body: JSON.stringify({"car_id": this.$route.params.id,"user_id": localStorage.getItem("current_user")}),
+                  headers: {
+                      'Content-Type': 'application/json',
+                      'X-CSRFToken': token,
+                      'Authorization': 'Bearer ' + localStorage.getItem('token')
+                  },
+                  credentials: 'same-origin' 
+              })
+              .then(function(response) {
+                  return response.json();
+              })
+              .then(function(jsonResponse) {
+                  if (jsonResponse.message!=undefined) {
+                      
+                  }
+              })
+              .catch(function(error) {
+                  console.log(error);
+              });
+          }
+          else{
+              fetch("/api/cars/"+this.$route.params.id+"/favourite/remove", {
+                  method: 'POST',
+                  headers: {
+                      'Content-Type': 'application/json',
+                      'X-CSRFToken': token,
+                      'Authorization': 'Bearer ' + localStorage.getItem('token')
+                  },
+                  credentials: 'same-origin' 
+              })
+              .then(function(response) {
+                  return response.json();
+              })
+              .then(function(jsonResponse) {
+                  console.log(jsonResponse.data)
+              })
+              .catch(function(error) {
+                  console.log(error);
+              });
+          }
+      },
+      fav(){
+          if (self.isFav) {
+              return true;
+          }
+          return false;
+      
+      }
+  },
+  data(){
+      return {
+          details: [],
+          isFav: false
+      }
+  }
+};
+
 const Home = {
   name: 'Home',
   template: `
@@ -257,8 +629,8 @@ const Home = {
           Great Price on the Vehicle You Want.</p>
           <div class="row" style="padding-right: 450px;">
               <div class="col-sm-12 text-center">
-                  <button id="btnRegister" class="btn btn-success" @click="$router.push('register')" type="submit" name="submit"><b>REGISTER</b></button>
-                  <button id="btnLogin" class="btn btn-primary" @click="$router.push('login')" type="submit" name="submit"><b>LOGIN</b></button>
+              <button @click="$router.push('login')" id="btnLogin" class="btn btn-primary"  type="submit" name="submit"><b>LOGIN</b></button>
+                  <button @click="$router.push('register')" id="btnRegister" class="btn btn-success"  type="submit" name="submit"><b>REGISTER</b></button>
                   </div>
               </div>
           </div>
@@ -266,13 +638,123 @@ const Home = {
               </div>
           </div>
       </div>
-      <img id= "redCar" style= "padding-bottom: 20px;" src="{{ url_for('static', filename='imgs/red_audi-unsplash.jpg') }}" alt="Red Car"/>
+      <img style= "padding-bottom: 20px;" id= "redCar"  src="{{ url_for('static', filename='imgs/red_audi-unsplash.jpg') }}" alt="Red Car"/>
   </div>
   `,
   data() {
       return {}
   }
 };
+
+const AddCarForm = {
+  name: 'AddCarForm',
+  template: `
+  <div class="container maincontainer">
+  <div class="m-4 ">
+      <h2 id="newcar" class="mb-4" >Add New Car</h2>
+      <form  @submit.prevent="addCar()" class="form" method="POST" action="" id="car-form" >
+          <div class="mt-sm-1 mb-sm-1 d-flex flex-area1">
+              <div>
+                  <label class="" for="make">Make</label><br>
+                  <input type="text" class="form-control form-field" name="make" required>
+              </div>
+              <div>
+                  <label class="" for="model">Model</label><br>
+                  <input type="text" class="form-control form-field" name="model" required>
+              </div>
+          </div>
+          <div class="mt-sm-3 mb-sm-1 d-flex flex-area1">
+              <div>
+                  <label class="" for="colour">Colour</label><br>
+                  <input type="text" class="form-control form-field" name="colour" required>
+              </div>
+              <div>
+                  <label class="" for="year">Year</label><br>
+                  <input type="text" class="form-control form-field" name="year" required>
+              </div>
+          </div>
+          <div class="mt-sm-3 mb-sm-1 d-flex flex-area1">
+              <div>
+                  <label class="" for="price">Price</label><br>
+                  <input type="number" class="form-control form-field" name="price" required>
+              </div>
+              <div>
+                  <label class="" for="ctype">Car Type</label><br>
+                  <select name="ctype" class="form-control form-field" required>
+                      <option value="SUV">SUV</option>
+                      <option value="Sedan">Sedan</option>
+                      <option value="Truck">Truck</option>
+                      <option value="Hybrid/Electric">Hybrid/Electric</option>
+                      <option value="Coupe">Coupe</option>
+                      <option value="Sports Car">Sports Car</option>
+                      <option value="Diesel">Diesel</option>                    
+                      <option value="Super Car">Super Car</option>
+                      <option value="Van">Van</option>
+                  </select>
+              </div>
+          </div>
+          <div >
+              <label class="" for="transmission">Transmission</label><br>
+              <select name="transmission" class="form-control form-field" required>
+                  <option value="Automatic">Automatic</option>
+                  <option value="Manual">Manual</option>
+              </select>
+          </div>
+          <div>
+              <label class="" for="description">Description</label><br>
+              <textarea name="description" class="form-control" rows="4" required></textarea><br>
+          </div>
+          <div class="">
+              <label class="" for="photo">Submit Photo</label><br>
+              <input type="file" class="form-control form-field" name="photo" accept=".jpeg, .jpg, .png" required>
+          </div>
+          <button type="submit" name="submit" class="btn color text-white mt-sm-3 mb-sm-1">Save</button>
+      </form>
+  </div>
+  </div>
+  `,
+  data() {
+      return {}
+  }, 
+  methods: {
+      addCar: function() {
+
+          let self = this;
+          let CarForm = document.getElementById('car-form');
+          let form_data = new FormData(CarForm);
+
+          fetch("/api/cars", {
+              method: 'POST',
+              body: form_data,
+              headers: {
+                  'X-CSRFToken': token,
+                  'Authorization': 'Bearer ' + localStorage.getItem('token')
+              },
+              credentials: 'same-origin'        
+          })
+          .then(function(response) {
+              console.log(response);
+              return response.json();
+          })
+          .then(function(jsonResponse) {
+              if(jsonResponse.data){
+                  router.push('/explore');
+                  swal({title: "Add Car",text: jsonResponse.message,icon: "success",button: "Proceed"});
+              }else{
+                  swal({title: "Add Car",text: jsonResponse.errors[0],icon: "error",button: "Try Again"});
+              }
+              
+          })
+          .catch(function(error) {
+              console.log(error);
+          });
+  
+      }
+      
+  }
+};
+
+
 
 const NotFound = {
   name: 'NotFound',
@@ -294,18 +776,16 @@ const routes = [
 
   {path: "/login", component: loginForm},
   
-  { path: "/cars/new" , component: CarForm},
+  { path: "/users/:id",name:"users", component: User_Page },
 
-  { path: "/explore" , component: Explore},
+  {path: "/cars/:id",name:"details", component: Details},
 
-  { path: "/cars/:car_id" , component: CarInfo,props:true},
+  {path: "/addcar", component: AddCarForm},
 
-  { path: "/logout" , component: Logout},
-
-  { path: "/users/:user_id" , component: UserInfo,props:true},
-   
+  {path: "/explore", component: explorepage},
 
   // This is a catch all route in case none of the above matches
+  {path: "/logout", component: logout},
   
   { path: '/:pathMatch(.*)*', name: 'not-found', component: NotFound }
 ];
