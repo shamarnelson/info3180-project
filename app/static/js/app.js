@@ -294,10 +294,18 @@ const routes = [
 
   {path: "/login", component: loginForm},
   
-  {path: "/addcar", component: },
+  { path: "/cars/new" , component: CarForm},
+
+  { path: "/explore" , component: Explore},
+
+  { path: "/cars/:car_id" , component: CarInfo,props:true},
+
+  { path: "/logout" , component: Logout},
+
+  { path: "/users/:user_id" , component: UserInfo,props:true},
+   
 
   // This is a catch all route in case none of the above matches
-  {path: "/logout", component: logout},
   
   { path: '/:pathMatch(.*)*', name: 'not-found', component: NotFound }
 ];
