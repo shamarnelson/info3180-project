@@ -1,6 +1,5 @@
 
-let displaySuccessMsg = False;
-let displayDangerMsg = False;
+
 var jwt;
 let dangerMsg;
 let successMsg;
@@ -18,7 +17,7 @@ app.component('app-header', {
   name: 'AppHeader',
   template: `
   <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top">
-    <a class="navbar-brand" href="/"><img id="icon" src="../static/imgs/photogram.png" alt="Logo"/> <b>Photogram</b></a>
+    <a class="navbar-brand" href="/"><img id="icon" src="../static/imgs/car.png" alt="Logo"/> <b>United Auto Sales</b></a>
     <button  type="button" data-toggle="collapse" class="navbar-toggler" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-label="Toggle navigation" aria-expanded="false">
         <span class="navbar-toggler-icon"></span>
     </button>
@@ -242,6 +241,34 @@ const loginForm = {
   }
 };
 
+const logout = {
+    name: 'Logout',
+    template: `
+    <h1 class="mt-sm-3">Logging out...</h1>
+    `,
+    created: function() {
+        fetch("api/auth/logout", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': token,
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            },
+            credentials: 'same-origin'
+        })
+        .then(function(response){
+          return response.json();
+        })
+        .then(function(jsonResponse){
+            window.localStorage.removeItem('token');
+            window.localStorage.removeItem('current_user');
+            router.push('/');
+        })
+        .catch(function(error){
+          console.log(error);
+        });
+    }
+};
 
 const explorepage = {
   name: 'explorepage',
